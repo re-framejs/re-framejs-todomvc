@@ -24,15 +24,17 @@
 			.set('items', cmd[1].reduce(function (acc, item) {
 				return acc
 					.set(item.id, Immutable.Map(item));
-			}, Immutable.Map()))
+			}, Immutable.OrderedMap()))
 			.set('filter', cmd[2] || 'all');
 	});
 
 	reframe.registerHandler('create_item', function (db, cmd) {
 		var id = guid();
+
 		return db
 			.setIn(['items', id], Immutable.Map({
 				id: id,
+				created: Date.now(),
 				completed: false,
 				title: cmd[1]
 			}));
