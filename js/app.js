@@ -4,20 +4,44 @@
 	function identity(a) {
 		return a;
 	}
+
+	function S4() {
+		return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+	};
+
+	// Generate a pseudo-GUID by concatenating random hexadecimal.
+	function guid() {
+		return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
+	};
 	// Your starting point. Enjoy the ride!
 
+	reframe.registerHandler('initDb', function (db) {
+		return Immutable.Map({
+			items: Immutable.OrderedMap(),
+			filter: 'all',
+			editing: Immutable.Map()
+		});
+	});
+	reframe.dispatchSync(['initDb']);
+
+	reframe.registerHandler('resetDb', function (db, cmd) {
+		return db.set('items', cmd[1].reduce(function (acc, item) {
+			return acc.set(item.id, Immutable.Map(item));
+		}, Immutable.Map()));
+	});
+
 	reframe.registerHandler('create_item', function (db, cmd) {
-		return db.updateIn(['items'], Immutable.List(), function (items) {
-			return items.push(Immutable.Map({
-					completed: false,
-					title: cmd[1]
-				}
-			));
-		})
+		var id = guid();
+		return db
+			.setIn(['items', id], Immutable.Map({
+				id: id,
+				completed: false,
+				title: cmd[1]
+			}));
 	});
 
 	reframe.registerHandler('complete_all', function (db, cmd) {
-		return db.updateIn(['items'], Immutable.List(), function (items) {
+		return db.updateIn(['items'], function (items) {
 			return items.map(function (item) {
 				return item.set('completed', true);
 			});
@@ -25,7 +49,7 @@
 	});
 
 	reframe.registerHandler('activate_all', function (db, cmd) {
-		return db.updateIn(['items'], Immutable.List(), function (items) {
+		return db.updateIn(['items'], function (items) {
 			return items.map(function (item) {
 				return item.set('completed', false);
 			});
@@ -68,19 +92,22 @@
 	});
 
 	reframe.registerSub('hasItems', function () {
-		return reframe.indexPath(['items'], Immutable.List()).map(function (items) {
+		return reframe.indexPath(['items']).map(function (items) {
 			return items.size > 0;
 		})
 	});
 
 	reframe.registerSub('activeItemsCount', function () {
-		return reframe.indexPath(['items']).map(function (items) {
-			return items.size;
-		});
+		return reframe.indexPath(['items'])
+			.map(function (items) {
+				return items.filter(function(item) {
+					return !item.get('completed');
+				}).size;
+			});
 	});
 
 	reframe.registerSub('itemsIndex', function () {
-		return reframe.indexPath(['items'], Immutable.List())
+		return reframe.indexPath(['items'])
 			.map(function (items) {
 				return items.keySeq().toList()
 			})
@@ -88,7 +115,7 @@
 	});
 
 	reframe.registerSub('activeItemsIndex', function () {
-		return reframe.indexPath(['items'], Immutable.List())
+		return reframe.indexPath(['items'])
 			.map(function (items) {
 				return items
 					.filter(function (item) {
@@ -102,7 +129,7 @@
 	});
 
 	reframe.registerSub('completedItemsIndex', function () {
-		return reframe.indexPath(['items'], Immutable.List())
+		return reframe.indexPath(['items'])
 			.map(function (items) {
 				return items
 					.filter(function (item) {
@@ -117,11 +144,11 @@
 
 
 	reframe.registerSub('item', function (db, cmd) {
-		return reframe.indexPath(['items', cmd[1]], Immutable.Map());
+		return reframe.indexPath(['items', cmd[1]]);
 	});
 
 	reframe.registerSub('allCompleted', function () {
-		return reframe.indexPath(['items'], Immutable.List()).map(function (items) {
+		return reframe.indexPath(['items']).map(function (items) {
 			return items
 					.filter(function (item) {
 						return item.get('completed');
@@ -131,7 +158,7 @@
 	});
 
 	reframe.registerSub('hasCompleted', function () {
-		return reframe.indexPath(['items'], Immutable.List()).map(function (items) {
+		return reframe.indexPath(['items']).map(function (items) {
 			return items.filter(function (item) {
 					return item.get('completed');
 				}).size > 0;
@@ -145,6 +172,49 @@
 	reframe.registerSub('filter', function () {
 		return reframe.indexPath(['filter'], 'all');
 	});
+
+	if (localStorage) {
+		var ids = JSON.parse(localStorage.getItem('todos-reframejs'));
+		var items = ids
+			.map(function (id) {
+				return JSON.parse(localStorage.getItem('todos-reframejs-' + id));
+			})
+			.filter(Boolean);
+
+		reframe.dispatchSync(['resetDb', items]);
+
+		reframe.db$
+			.skip(1)
+			.map(function (db) {
+				return db.get('items');
+			})
+			.distinctUntilChanged(identity, Immutable.is)
+			.scan(function (acc, newItems) {
+				var ids = newItems.keySeq().toSet();
+				return {
+					current: newItems,
+					ids: ids,
+					remove: acc.ids.subtract(ids),
+					update: newItems.filter(function (item) {
+						return item !== acc.current.get(item.get('id'));
+					})
+				};
+			}, {
+				current: Immutable.OrderedMap(),
+				ids: Immutable.Set()
+			})
+			.subscribe(function (acc) {
+				localStorage.setItem('todos-reframejs', JSON.stringify(acc.ids.toJS()));
+
+				acc.remove.forEach(function (id) {
+					localStorage.removeItem('todos-reframejs-' + id);
+				});
+				acc.update.forEach(function (item) {
+					console.log(item.toJS());
+					localStorage.setItem('todos-reframejs-' + item.get('id'), JSON.stringify(item.toJS()));
+				});
+			});
+	}
 
 	var NewTodo = reframe.view('NewTodo', {
 		getInitialState: function () {
@@ -172,7 +242,7 @@
 		}
 	});
 
-	var TodoItem = reframe.view('TodoItem', {
+	var TodoItem = reframe.viewSP('TodoItem', {
 		getInitialState: function () {
 			return {value: ''};
 		},
@@ -190,12 +260,13 @@
 		commitChange: function () {
 			var value = this.state.value.trim();
 			if (value) {
-				reframe.dispatch(['changeItem', this.props.argv[0], this.state.value]);
+				reframe.dispatch(['changeItem', this.props.id, this.state.value]);
 			} else {
-				reframe.dispatch(['removeItem', this.props.argv[0]]);
+				reframe.dispatch(['removeItem', this.props.id]);
 			}
 		},
-		render: function (itemIdx) {
+		render: function () {
+			var itemIdx = this.props.id;
 			var item = this.derefSub(['item', itemIdx]);
 			var editing = this.derefSub(['itemEditing', itemIdx]);
 
@@ -250,7 +321,9 @@
 		}
 
 		return React.DOM.ul({className: 'todo-list'},
-			itemsIndex.map(TodoItem).toArray()
+			itemsIndex.map(function (id) {
+				return TodoItem({id: id, key: id});
+			}).toArray()
 		);
 	});
 
@@ -321,37 +394,30 @@
 	var TodoApp = reframe.view('TodoApp', function () {
 		var hasItems = this.derefSub(['hasItems']);
 
-		return React.DOM.div({},
+		return React.DOM.section(
+			{className: 'todoapp'},
+			React.DOM.header(
+				{className: 'header'},
+				React.DOM.h1(null, 'todos'),
+				NewTodo()),
 			React.DOM.section(
-				{className: 'todoapp'},
-				React.DOM.header(
-					{className: 'header'},
-					React.DOM.h1(null, 'todos'),
-					NewTodo()),
-				React.DOM.section(
-					{
-						className: 'main',
-						style: {
-							display: hasItems ? 'block' : 'none'
-						}
-					},
-					ToggleAll(),
-					TodoList()
-				),
-				React.DOM.footer({
-						className: 'footer', style: {
-							display: hasItems ? 'block' : 'none'
-						}
-					},
-					TodoCount(),
-					Filters(),
-					ClearCompleted()
-				)
+				{
+					className: 'main',
+					style: {
+						display: hasItems ? 'block' : 'none'
+					}
+				},
+				ToggleAll(),
+				TodoList()
 			),
-			React.DOM.footer({className: 'info'},
-				React.DOM.p({}, 'Double-click to edit a todo'),
-				React.DOM.p({}, 'Created by', React.DOM.a({href: 'http://tomasd.github.io/'}, 'Tomas Drencak')),
-				React.DOM.p({}, 'Part of', React.DOM.a({href: 'http://todomvc.com'}, 'TodoMVC'))
+			React.DOM.footer({
+					className: 'footer', style: {
+						display: hasItems ? 'block' : 'none'
+					}
+				},
+				TodoCount(),
+				Filters(),
+				ClearCompleted()
 			)
 		);
 	});
