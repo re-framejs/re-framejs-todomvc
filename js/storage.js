@@ -40,7 +40,7 @@ window.TodoAppStorage = (function (reframe, localStorage) {
 		},
 		loadState: function (initFilter) {
 			if (localStorage) {
-				var ids = JSON.parse(localStorage.getItem('todos-reframejs'));
+				var ids = JSON.parse(localStorage.getItem('todos-reframejs')) || [];
 				var items = ids
 					.map(function (id) {
 						return JSON.parse(localStorage.getItem('todos-reframejs-' + id));
