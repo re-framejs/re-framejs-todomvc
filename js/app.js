@@ -25,9 +25,12 @@
 	reframe.dispatchSync(['initDb']);
 
 	reframe.registerHandler('resetDb', function (db, cmd) {
-		return db.set('items', cmd[1].reduce(function (acc, item) {
-			return acc.set(item.id, Immutable.Map(item));
-		}, Immutable.Map()));
+		return db
+			.set('items', cmd[1].reduce(function (acc, item) {
+				return acc
+					.set(item.id, Immutable.Map(item));
+			}, Immutable.Map()))
+			.set('filter', cmd[2] || 'all');
 	});
 
 	reframe.registerHandler('create_item', function (db, cmd) {
@@ -100,7 +103,7 @@
 	reframe.registerSub('activeItemsCount', function () {
 		return reframe.indexPath(['items'])
 			.map(function (items) {
-				return items.filter(function(item) {
+				return items.filter(function (item) {
 					return !item.get('completed');
 				}).size;
 			});
@@ -173,6 +176,12 @@
 		return reframe.indexPath(['filter'], 'all');
 	});
 
+	var initFilter = {
+		'#/': 'all',
+		'#/active': 'active',
+		'#/completed': 'completed'
+	}[document.location.hash];
+
 	if (localStorage) {
 		var ids = JSON.parse(localStorage.getItem('todos-reframejs'));
 		var items = ids
@@ -181,7 +190,7 @@
 			})
 			.filter(Boolean);
 
-		reframe.dispatchSync(['resetDb', items]);
+		reframe.dispatchSync(['resetDb', items, initFilter]);
 
 		reframe.db$
 			.skip(1)
@@ -214,6 +223,8 @@
 					localStorage.setItem('todos-reframejs-' + item.get('id'), JSON.stringify(item.toJS()));
 				});
 			});
+	} else {
+		reframe.dispatchSync(['resetDb', [], initFilter]);
 	}
 
 	var NewTodo = reframe.view('NewTodo', {
@@ -244,17 +255,26 @@
 
 	var TodoItem = reframe.viewSP('TodoItem', {
 		getInitialState: function () {
-			return {value: ''};
+			return {
+				value: '',
+				commitOnBlur: false
+			};
 		},
 		_onChange: function (e) {
 			this.setState({value: e.target.value});
 		},
 		_onBlur: function () {
-			this.commitChange();
+			if (this.state.commitOnBlur) {
+				this.commitChange();
+			}
 		},
 		_onKeyPress: function (e) {
 			if (e.key === 'Enter') {
 				this.refs.input.blur();
+			}
+			if (e.key === 'Escape') {
+				this.setState({commitOnBlur: false})
+				reframe.dispatch(['toggleEdit', this.props.id, false]);
 			}
 		},
 		commitChange: function () {
@@ -284,7 +304,10 @@
 					React.DOM.label({
 						onDoubleClick: function (e) {
 							reframe.dispatchSync(['toggleEdit', itemIdx]);
-							this.setState({value: item.get('title')}, function () {
+							this.setState({
+								value: item.get('title'),
+								commitOnBlur: true
+							}, function () {
 								this.refs.input.focus();
 							}.bind(this));
 						}.bind(this)
@@ -302,7 +325,7 @@
 					value: editing ? this.state.value : item.get('title'),
 					onChange: this._onChange,
 					onBlur: this._onBlur,
-					onKeyPress: this._onKeyPress
+					onKeyDown: this._onKeyPress
 				})
 			);
 		}

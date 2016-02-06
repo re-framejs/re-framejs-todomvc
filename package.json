@@ -1,8 +1,8 @@
 {
   "private": true,
   "dependencies": {
+    "re-framejs": "https://github.com/tomasd/re-framejs.git",
     "todomvc-app-css": "^2.0.0",
-    "todomvc-common": "^1.0.0",
-    "re-framejs": "https://github.com/tomasd/re-framejs.git"
+    "todomvc-common": "^1.0.0"
   }
 }
