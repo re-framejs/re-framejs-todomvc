@@ -3,13 +3,21 @@
 
 	// Your starting point. Enjoy the ride!
 
-	var currentFilter = {
-		'#/': 'all',
-		'#/active': 'active',
-		'#/completed': 'completed'
-	}[document.location.hash];
+	function currentFilter() {
 
-	TodoAppStorage.loadState(currentFilter || 'all');
+		var filter = {
+			'#/': 'all',
+			'#/active': 'active',
+			'#/completed': 'completed'
+		}[window.document.location.hash];
+		return filter || 'all';
+	}
+
+	window.onhashchange = function () {
+		reframe.dispatch(['setFilter', currentFilter()]);
+	};
+
+	TodoAppStorage.loadState(currentFilter());
 	TodoAppStorage.startSync();
 	TodoAppView.render(window.document.getElementById("app"));
 	window.document.getElementById('new-todo').focus();
