@@ -9,6 +9,7 @@ window.TodoAppStorage = (function (reframe, localStorage) {
 		startSync: function () {
 			reframe.db$
 				.skip(1)
+				.debounce(500)
 				.map(function (db) {
 					return db.get('items');
 				})
