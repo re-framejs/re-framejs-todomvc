@@ -1,4 +1,4 @@
-(function (window, TodoAppView, TodoAppStorage) {
+(function (window, TodoAppView, reframe) {
 	'use strict';
 
 	// Your starting point. Enjoy the ride!
@@ -17,9 +17,9 @@
 		reframe.dispatch(['setFilter', currentFilter()]);
 	};
 
-	TodoAppStorage.loadState(currentFilter());
-	TodoAppStorage.startSync();
+	reframe.dispatchSync(['resetDb', currentFilter()]);
+
 	TodoAppView.render(window.document.getElementById("app"));
 	window.document.getElementById('new-todo').focus();
 })
-(window, TodoAppView, TodoAppStorage);
+(window, TodoAppView, reframe);

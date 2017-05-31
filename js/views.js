@@ -130,6 +130,7 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		var allCompleted = this.derefSub(['todo/allCompleted']);
 		return React.DOM.div({},
 			React.DOM.input({
+				id: 'toggle-all',
 				className: 'toggle-all', type: 'checkbox',
 				checked: allCompleted,
 				onChange: function (e) {
@@ -157,21 +158,14 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		return React.DOM.ul({className: 'filters'},
 			React.DOM.li({}, React.DOM.a({
 				className: filter === 'all' ? 'selected' : '', href: '#/',
-				onClick: function (e) {
-					reframe.dispatch(['setFilter', 'all']);
-				}
 			}, 'All')),
 			React.DOM.li({}, React.DOM.a({
 				className: filter === 'active' ? 'selected' : '',
-				href: '#/active', onClick: function (e) {
-					reframe.dispatch(['setFilter', 'active']);
-				}
+				href: '#/active'
 			}, 'Active')),
 			React.DOM.li({}, React.DOM.a({
 				className: filter === 'completed' ? 'selected' : '',
-				href: '#/completed', onClick: function (e) {
-					reframe.dispatch(['setFilter', 'completed']);
-				}
+				href: '#/completed'
 			}, 'Completed'))
 		)
 	});
