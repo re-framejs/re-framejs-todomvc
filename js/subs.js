@@ -5,86 +5,108 @@
 		return a;
 	}
 
-	reframe.registerSub('hasItems', function () {
-		return reframe.indexPath(['items']).map(function (items) {
-			return items.size > 0;
-		})
+	reframe.regSub('todo/items', function (db) {
+		return db.get('items', Immutable.List());
 	});
 
-	reframe.registerSub('activeItemsCount', function () {
-		return reframe.indexPath(['items'])
-			.map(function (items) {
-				return items.filter(function (item) {
-					return !item.get('completed');
-				}).size;
-			});
-	});
-
-	reframe.registerSub('itemsIndex', function () {
-		return reframe.indexPath(['items'])
-			.map(function (items) {
-				return items.keySeq().toList()
-			})
-			.distinctUntilChanged(identity, Immutable.is);
-	});
-
-	reframe.registerSub('activeItemsIndex', function () {
-		return reframe.indexPath(['items'])
-			.map(function (items) {
-				return items
-					.filter(function (item) {
-						return !item.get('completed');
-					})
-					.map(function (item, idx) {
-						return idx;
-					})
-			})
-			.distinctUntilChanged(identity, Immutable.is);
-	});
-
-	reframe.registerSub('completedItemsIndex', function () {
-		return reframe.indexPath(['items'])
-			.map(function (items) {
-				return items
-					.filter(function (item) {
-						return item.get('completed');
-					})
-					.map(function (item, idx) {
-						return idx;
-					})
-			})
-			.distinctUntilChanged(identity, Immutable.is);
-	});
-
-
-	reframe.registerSub('item', function (db, cmd) {
-		return reframe.indexPath(['items', cmd[1]]);
-	});
-
-	reframe.registerSub('allCompleted', function () {
-		return reframe.indexPath(['items']).map(function (items) {
-			return items
-					.filter(function (item) {
-						return item.get('completed');
-					})
-					.size === items.size && items.size > 0;
-		})
-	});
-
-	reframe.registerSub('hasCompleted', function () {
-		return reframe.indexPath(['items']).map(function (items) {
+	reframe.regSub(
+		'todo/completed-items',
+		() => reframe.subscribe(['todo/items']),
+		function (items) {
 			return items.filter(function (item) {
-					return item.get('completed');
-				}).size > 0;
+				return item.get('completed');
+			});
+		});
+
+	reframe.regSub(
+		'todo/active-items',
+		() => reframe.subscribe(['todo/items']),
+		function (items) {
+			return items.filter(function (item) {
+				return !item.get('completed');
+			});
+		});
+
+	function regItemsSub(id, fn) {
+		reframe.regSub(
+			id,
+			function () {
+				return reframe.subscribe(['todo/items']);
+			},
+			fn
+		);
+	}
+
+	function regCompletedItemsSub(id, fn) {
+		reframe.regSub(
+			id,
+			function () {
+				return reframe.subscribe(['todo/completed-items']);
+			},
+			fn
+		);
+	}
+
+	function regActiveItemsSub(id, fn) {
+		reframe.regSub(
+			id,
+			function () {
+				return reframe.subscribe(['todo/active-items']);
+			},
+			fn
+		);
+	}
+
+
+	regItemsSub('todo/hasItems', function (items) {
+		return items.size > 0;
+	});
+
+	regActiveItemsSub('todo/activeItemsCount', function (items) {
+		return items.size;
+	});
+
+
+	regItemsSub('todo/itemsIndex', function (items) {
+		return items.keySeq().toList()
+	});
+
+	regActiveItemsSub('todo/activeItemsIndex', function (items) {
+		return items.map(function (item, idx) {
+			return idx;
 		});
 	});
 
-	reframe.registerSub('itemEditing', function (db, cmd) {
-		return reframe.indexPath(['editing', cmd[1]], false);
+	regCompletedItemsSub('todo/completedItemsIndex', function (items) {
+		return items.map(function (item, idx) {
+			return idx;
+		});
 	});
 
-	reframe.registerSub('filter', function () {
-		return reframe.indexPath(['filter'], 'all');
+
+	regItemsSub('todo/item', function (items, cmd) {
+		const itemId = cmd[1];
+		return items.get(itemId);
+	});
+
+	regItemsSub('todo/allCompleted', function (items) {
+		return items
+				.filter(function (item) {
+					return item.get('completed');
+				})
+				.size === items.size && items.size > 0;
+	});
+
+	regCompletedItemsSub('todo/hasCompleted', function (items) {
+		return items.size > 0;
+	});
+
+	reframe.regSub('todo/itemEditing', function (db, cmd) {
+		return db.getIn(['editing', cmd[1]], false);
+	});
+
+	reframe.regSub('todo/filter', function (db) {
+		return db.get('filter', 'all');
 	});
 
 })(reframe, Immutable);

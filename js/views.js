@@ -2,7 +2,7 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 	'use strict';
 
 
-	var NewTodo = reframe.view('NewTodo', {
+	var NewTodo = reframe.ui('NewTodo', {
 		getInitialState: function () {
 			return {value: ''};
 		},
@@ -29,7 +29,7 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		}
 	});
 
-	var TodoItem = reframe.viewSP('TodoItem', {
+	var TodoItem = reframe.ui('TodoItem', {
 		getInitialState: function () {
 			return {
 				value: '',
@@ -63,8 +63,8 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		},
 		render: function () {
 			var itemIdx = this.props.id;
-			var item = this.derefSub(['item', itemIdx]);
-			var editing = this.derefSub(['itemEditing', itemIdx]);
+			var item = this.derefSub(['todo/item', itemIdx]);
+			var editing = this.derefSub(['todo/itemEditing', itemIdx]);
 
 			var isCompleted = item.get('completed');
 			return React.DOM.li({
@@ -107,16 +107,16 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		}
 	});
 
-	var TodoList = reframe.view('TodoList', function () {
-		var filter = this.derefSub(['filter']);
+	var TodoList = reframe.ui('TodoList', function () {
+		var filter = this.derefSub(['todo/filter']);
 		var itemsIndex;
 
 		if (filter === 'active') {
-			itemsIndex = this.derefSub(['activeItemsIndex']);
+			itemsIndex = this.derefSub(['todo/activeItemsIndex']);
 		} else if (filter === 'completed') {
-			itemsIndex = this.derefSub(['completedItemsIndex']);
+			itemsIndex = this.derefSub(['todo/completedItemsIndex']);
 		} else {
-			itemsIndex = this.derefSub(['itemsIndex']);
+			itemsIndex = this.derefSub(['todo/itemsIndex']);
 		}
 
 		return React.DOM.ul({className: 'todo-list'},
@@ -126,8 +126,8 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		);
 	});
 
-	var ToggleAll = reframe.view('ToggleAll', function () {
-		var allCompleted = this.derefSub(['allCompleted']);
+	var ToggleAll = reframe.ui('ToggleAll', function () {
+		var allCompleted = this.derefSub(['todo/allCompleted']);
 		return React.DOM.div({},
 			React.DOM.input({
 				className: 'toggle-all', type: 'checkbox',
@@ -144,15 +144,15 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		);
 	});
 
-	var TodoCount = reframe.view('TodoCount', function () {
-		var activeItemsCount = this.derefSub(['activeItemsCount']);
+	var TodoCount = reframe.ui('TodoCount', function () {
+		var activeItemsCount = this.derefSub(['todo/activeItemsCount']);
 		return React.DOM.span({className: 'todo-count'},
 			React.DOM.strong({}, activeItemsCount), activeItemsCount === 1 ? ' item left' : ' items left'
 		);
 	});
 
-	var Filters = reframe.view('Filters', function () {
-		var filter = this.derefSub(['filter']);
+	var Filters = reframe.ui('Filters', function () {
+		var filter = this.derefSub(['todo/filter']);
 
 		return React.DOM.ul({className: 'filters'},
 			React.DOM.li({}, React.DOM.a({
@@ -176,8 +176,8 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 		)
 	});
 
-	var ClearCompleted = reframe.view('ClearCompleted', function () {
-		var hasCompleted = this.derefSub(['hasCompleted']);
+	var ClearCompleted = reframe.ui('ClearCompleted', function () {
+		var hasCompleted = this.derefSub(['todo/hasCompleted']);
 		if (!hasCompleted) {
 			return React.DOM.div();
 		}
@@ -190,8 +190,8 @@ window.TodoAppView = (function (window, reframe, React, ReactDOM) {
 	});
 
 
-	var TodoApp = reframe.view('TodoApp', function () {
-		var hasItems = this.derefSub(['hasItems']);
+	var TodoApp = reframe.ui('TodoApp', function () {
+		var hasItems = this.derefSub(['todo/hasItems']);
 
 		return React.DOM.section(
 			{className: 'todoapp'},

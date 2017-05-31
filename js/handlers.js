@@ -10,7 +10,7 @@
 		return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 	};
 
-	reframe.registerHandler('initDb', function (db) {
+	reframe.regEventDb('initDb', function (db) {
 		return Immutable.Map({
 			items: Immutable.OrderedMap(),
 			filter: 'all',
@@ -19,7 +19,7 @@
 	});
 	reframe.dispatchSync(['initDb']);
 
-	reframe.registerHandler('resetDb', function (db, cmd) {
+	reframe.regEventDb('resetDb', function (db, cmd) {
 		return db
 			.set('items', cmd[1].reduce(function (acc, item) {
 				return acc
@@ -28,7 +28,7 @@
 			.set('filter', cmd[2] || 'all');
 	});
 
-	reframe.registerHandler('create_item', function (db, cmd) {
+	reframe.regEventDb('create_item', function (db, cmd) {
 		var id = guid();
 
 		return db
@@ -40,7 +40,7 @@
 			}));
 	});
 
-	reframe.registerHandler('complete_all', function (db, cmd) {
+	reframe.regEventDb('complete_all', function (db, cmd) {
 		return db.updateIn(['items'], function (items) {
 			return items.map(function (item) {
 				return item.set('completed', true);
@@ -48,7 +48,7 @@
 		});
 	});
 
-	reframe.registerHandler('activate_all', function (db, cmd) {
+	reframe.regEventDb('activate_all', function (db, cmd) {
 		return db.updateIn(['items'], function (items) {
 			return items.map(function (item) {
 				return item.set('completed', false);
@@ -56,30 +56,30 @@
 		});
 	});
 
-	reframe.registerHandler('toggleItem', function (db, cmd) {
+	reframe.regEventDb('toggleItem', function (db, cmd) {
 		return db.updateIn(['items', cmd[1], 'completed'], function (completed) {
 			return !completed;
 		});
 	});
 
-	reframe.registerHandler('toggleEdit', function (db, cmd) {
+	reframe.regEventDb('toggleEdit', function (db, cmd) {
 		var value = cmd[2] === undefined ? !db.getIn(['editing', cmd[1]], false) : cmd[2];
 		return db.set('editing', Immutable.Map().set(cmd[1], value));
 	});
 
-	reframe.registerHandler('changeItem', function (db, cmd) {
+	reframe.regEventDb('changeItem', function (db, cmd) {
 		return db
 			.setIn(['items', cmd[1], 'title'], cmd[2])
 			.set('editing', Immutable.Map());
 	});
 
-	reframe.registerHandler('removeItem', function (db, cmd) {
+	reframe.regEventDb('removeItem', function (db, cmd) {
 		return db
 			.removeIn(['items', cmd[1]])
 			.set('editing', Immutable.Map());
 	});
 
-	reframe.registerHandler('clearCompleted', function (db) {
+	reframe.regEventDb('clearCompleted', function (db) {
 		return db.update('items', function (items) {
 			return items.filter(function (item) {
 				return !item.get('completed');
@@ -87,7 +87,7 @@
 		});
 	});
 
-	reframe.registerHandler('setFilter', function (db, cmd) {
+	reframe.regEventDb('setFilter', function (db, cmd) {
 		return db.set('filter', cmd[1]);
 	});
 })(reframe, Immutable);
